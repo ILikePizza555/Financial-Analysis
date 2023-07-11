@@ -8,6 +8,7 @@ packages = [{include = "financial_analysis"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+pandas = "^2.0.3"
 
 
 [build-system]

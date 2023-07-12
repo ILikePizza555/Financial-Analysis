@@ -4,19 +4,36 @@ import pandas
 from argparse import ArgumentParser, Namespace
 from collections.abc import Sequence
 from csv import DictReader
-from typing import Any
+from typing import Any, Callable, TypeVar
+from pandas import DataFrame
 from pandas.api.extensions import no_default
 
+OpFactory = Callable[..., Callable[[DataFrame], None]]
 
-class _OperactionAction(argparse.Action):
-    def __init__(self, option_strings: Sequence[str], dest: str, **kwargs) -> None:
+def rename_operation(old_name, new_name):
+    def op(data: DataFrame):
+        data.rename(columns={old_name: new_name}, inplace=True)
+    return op
+
+def combine_operation(col1, col2, new_name):
+    def op(data: DataFrame):
+        data[new_name] = data[col1] + data[col2]
+        data.drop(columns=[col1, col2], inplace=True)
+    return op
+
+
+class _OperationAction(argparse.Action):
+    def __init__(self, option_strings: Sequence[str], dest: str, op_func: OpFactory, **kwargs) -> None:
+        if op_func is None:
+            raise TypeError("op_func cannot be None")
+
+        self.op_func = op_func
         super().__init__(option_strings, dest, **kwargs)
     def __call__(self, parser: ArgumentParser, namespace: Namespace, values: str | Sequence[Any] | None, option_string: str | None = None) -> None:
         if type(values) is str:
             values = [option_string]
         
-        operation_name = option_string.strip("-")
-        operation = (operation_name, *values)
+        operation = self.op_func(*values)
 
         if getattr(namespace, self.dest) is None:
             setattr(namespace, self.dest, [])
@@ -29,10 +46,10 @@ arg_parser.add_argument("--db", default="finances.db", help="Path to the databas
 arg_parser.add_argument("--colname", "--colnames", action="extend", nargs="*", help="The names of the columns. If none are provided, the first row will be used.")
 
 _col_ops_grp = arg_parser.add_argument_group("Column Operations")
-_col_ops_grp.add_argument("--rename",  action=_OperactionAction, dest="opers", nargs=2, metavar=("OLD NAME", "NEW NAME"), help="Renames a column")
-_col_ops_grp.add_argument("--combine", action=_OperactionAction, dest="opers", nargs=3, metavar=("COLUMN 1", "COLUMN 2", "NEW NAME"))
+_col_ops_grp.add_argument("--rename",  action=_OperationAction, dest="opers", op_func=rename_operation, nargs=2, metavar=("OLD NAME", "NEW NAME"), help="Renames a column")
+_col_ops_grp.add_argument("--combine", action=_OperationAction, dest="opers", op_func=combine_operation, nargs=3, metavar=("COLUMN 1", "COLUMN 2", "NEW NAME"))
 
-if __name__ == "__main__":
+def _main():
     args = arg_parser.parse_args()
 
     with open(args.csv) as csv_file_handle:
@@ -41,11 +58,10 @@ if __name__ == "__main__":
 
         # Execute operations on the data
         if args.opers is not None:
-            for (op_name, *args) in args.opers:
-                if op_name == "rename":
-                    csv_data.rename(columns={args[0]: args[1]}, inplace=True)
-                elif op_name == "combine":
-                    csv_data[args[2]] = csv_data[args[0]] + csv_data[args[1]]
-                    csv_data.drop(columns=args[0:2], inplace=True)
+            for op in args.opers:
+                op(csv_data)
 
         print(csv_data)
+
+if __name__ == "__main__":
+    _main()

@@ -21,6 +21,10 @@ def combine_operation(col1, col2, new_name):
         data.drop(columns=[col1, col2], inplace=True)
     return op
 
+def drop_operation(columns):
+    def op(data: DataFrame):
+        data.drop(columns=columns, inplace=True)
+    return op
 
 class _OperationAction(argparse.Action):
     def __init__(self, option_strings: Sequence[str], dest: str, op_func: OpFactory, **kwargs) -> None:
@@ -48,6 +52,7 @@ arg_parser.add_argument("--colname", "--colnames", action="extend", nargs="*", h
 _col_ops_grp = arg_parser.add_argument_group("Column Operations")
 _col_ops_grp.add_argument("--rename",  action=_OperationAction, dest="opers", op_func=rename_operation, nargs=2, metavar=("OLD NAME", "NEW NAME"), help="Renames a column")
 _col_ops_grp.add_argument("--combine", action=_OperationAction, dest="opers", op_func=combine_operation, nargs=3, metavar=("COLUMN 1", "COLUMN 2", "NEW NAME"))
+_col_ops_grp.add_argument("--drop", action=_OperationAction, dest="opers", op_func=drop_operation, nargs="*", metavar="COLUMN")
 
 def _main():
     args = arg_parser.parse_args()

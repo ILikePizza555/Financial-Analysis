@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS migrations (
 );
 
 CREATE TABLE IF NOT EXISTS transactions (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     Description TEXT,
     PostDate DATE,
     Amount REAL,

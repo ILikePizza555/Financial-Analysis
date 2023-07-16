@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 CREATE TABLE IF NOT EXISTS tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT
+    name TEXT,
+    UNIQUE(name)
 );
 
 CREATE TABLE IF NOT EXISTS transaction_tags (
